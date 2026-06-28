@@ -14,7 +14,7 @@ contract BasePaint is ERC1155("https://basepaint.xyz/api/art/{id}"), Ownable {
     IBasePaintBrush public brushes;
 
     // ─────────────────────────────────────────────────────────────────────
-    //  Immutables & constants
+    //  Immutables
     // ─────────────────────────────────────────────────────────────────────
 
     /// @notice Fixed duration (in seconds) of each painting epoch / "day".
@@ -69,8 +69,8 @@ contract BasePaint is ERC1155("https://basepaint.xyz/api/art/{id}"), Ownable {
     //  Constructor
     // ─────────────────────────────────────────────────────────────────────
 
-    /// @param _brushes   Address of the IBasePaintBrush (Brush NFT) contract.
-    /// @param _epochDuration  Length of each painting period in seconds.
+    /// @param _brushes       Address of the IBasePaintBrush (Brush NFT) contract.
+    /// @param _epochDuration Length of each painting period in seconds.
     constructor(IBasePaintBrush _brushes, uint256 _epochDuration) {
         brushes = _brushes;
         epochDuration = _epochDuration;
@@ -113,14 +113,14 @@ contract BasePaint is ERC1155("https://basepaint.xyz/api/art/{id}"), Ownable {
     // ─────────────────────────────────────────────────────────────────────
 
     /// @notice Submit pixel data to the current day's canvas.
-    /// @param tokenId  The Brush NFT token ID authorising the paint action.
-    /// @param pixels   Encoded pixel data (off-chain rendering handles interpretation).
+    /// @param tokenId The Brush NFT token ID authorising the paint action.
+    /// @param pixels  Encoded pixel data — each 3 bytes encodes one pixel (x, y, colorIndex).
     function paint(uint256 tokenId, bytes calldata pixels) public {
         require(startedAt != 0, "Not started");
         require(brushes.ownerOf(tokenId) == msg.sender, "Not your brush");
 
         uint256 day = today();
-        uint256 pixelCount = pixels.length / 3; // each pixel = 3 bytes (x, y, color index)
+        uint256 pixelCount = pixels.length / 3;
 
         Canvas storage canvas = canvases[day];
         canvas.totalContributions += pixelCount;
@@ -135,7 +135,7 @@ contract BasePaint is ERC1155("https://basepaint.xyz/api/art/{id}"), Ownable {
     // ─────────────────────────────────────────────────────────────────────
 
     /// @notice Mint open-edition NFTs for one or more completed days.
-    /// @param days   Array of day indices to mint from.
+    /// @param daysList Array of day indices to mint from.
     /// @param amounts  Corresponding number of tokens to mint per day.
     function mint(uint256[] calldata daysList, uint256[] calldata amounts) public payable {
         require(startedAt != 0, "Not started");
@@ -171,15 +171,15 @@ contract BasePaint is ERC1155("https://basepaint.xyz/api/art/{id}"), Ownable {
     // ─────────────────────────────────────────────────────────────────────
 
     /// @notice Artists claim their pro-rata share of ETH raised from a completed day.
-    /// @param day   The day index to claim earnings for.
+    /// @param day The day index to claim earnings for.
     function authorWithdraw(uint256 day) public {
         require(day < today(), "Day not complete");
 
         Canvas storage canvas = canvases[day];
-        uint256 contributions = canvas.contributions[msg.sender];
-        require(contributions > 0, "No contributions");
+        uint256 artistContributions = canvas.contributions[msg.sender];
+        require(artistContributions > 0, "No contributions");
 
-        uint256 amount = (canvas.totalRaised * contributions) / canvas.totalContributions;
+        uint256 amount = (canvas.totalRaised * artistContributions) / canvas.totalContributions;
         require(amount > 0, "Nothing to withdraw");
 
         // Zero out before transfer to prevent re-entrancy
@@ -209,8 +209,9 @@ contract BasePaint is ERC1155("https://basepaint.xyz/api/art/{id}"), Ownable {
         return canvases[day].brushUsed[tokenId];
     }
 
-    /// @notice ERC-1155 metadata URI — returns the BasePaint API endpoint.
-    function uri(uint256 id) public pure override returns (string memory) {
+    /// @notice ERC-1155 metadata URI override — returns per-token BasePaint API URL.
+    /// @dev Must be `view` (not `pure`) to match the OZ v4 base signature.
+    function uri(uint256 id) public view override returns (string memory) {
         return string(abi.encodePacked("https://basepaint.xyz/api/art/", _toString(id)));
     }
 
