@@ -137,15 +137,15 @@ contract BasePaint is ERC1155("https://basepaint.xyz/api/art/{id}"), Ownable {
     /// @notice Mint open-edition NFTs for one or more completed days.
     /// @param days   Array of day indices to mint from.
     /// @param amounts  Corresponding number of tokens to mint per day.
-    function mint(uint256[] calldata days, uint256[] calldata amounts) public payable {
+    function mint(uint256[] calldata daysList, uint256[] calldata amounts) public payable {
         require(startedAt != 0, "Not started");
-        require(days.length == amounts.length, "Length mismatch");
+        require(daysList.length == amounts.length, "Length mismatch");
 
         uint256 totalCost = 0;
         uint256 currentDay = today();
 
-        for (uint256 i = 0; i < days.length; i++) {
-            uint256 day = days[i];
+        for (uint256 i = 0; i < daysList.length; i++) {
+            uint256 day = daysList[i];
             require(day < currentDay, "Day not complete");
             require(amounts[i] > 0, "Zero amount");
 
