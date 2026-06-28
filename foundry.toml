@@ -10,6 +10,9 @@ remappings = [
     "openzeppelin-contracts/=lib/openzeppelin-contracts/"
 ]
 
+[dependencies]
+"openzeppelin-contracts" = { version = "4.9.6", git = "https://github.com/OpenZeppelin/openzeppelin-contracts", tag = "v4.9.6" }
+
 [rpc_endpoints]
 base = "${BASE_RPC_URL}"
 
